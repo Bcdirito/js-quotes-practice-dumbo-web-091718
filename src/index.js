@@ -1,77 +1,108 @@
-// It might be a good idea to add event listener to make sure this file
-// only runs after the DOM has finshed loading.
-document.addEventListener("DOMContentLoaded", function(event) {
-  let quotesContainer = document.getElementById('quote-list')
-  let form = document.getElementById('new-quote-form')
-  let quoteInput = document.getElementById('new-quote')
-  let authorInput = document.getElementById('author')
-  let url = 'http://localhost:3000/quotes'
+window.addEventListener("DOMContentLoaded", (e) => {
+  const quotesURL = "http://localhost:3000/quotes"
+  const quotesList = document.getElementById("quote-list")
+  const form = document.getElementById("new-quote-form")
 
-  fetch('http://localhost:3000/quotes').then(function(response){
-    return response.json()
-  }).then(function(json){
-    json.forEach(function(quote) {
-      quotesContainer.innerHTML +=  `<li class='quote-card' id="${quote.id}">
-      <blockquote class="blockquote">
-      <p class="mb-0">${quote.quote}</p>
-      <footer class="blockquote-footer">${quote.author}</footer>
+  const globalHeaders = {
+    "Content-Type": "application/json",
+    "Access": "application/json"
+  }
+
+  const getQuotes = () => {
+    fetch(quotesURL)
+    .then(res => res.json())
+    .then(json => json.forEach(quote => {
+      populateArea(quotesList, quote)
+    })
+    )
+  }
+
+  form.addEventListener("submit", (e) => {
+    e.preventDefault()
+    postQuote(e.target.newQuote.value, e.target.newAuthor.value)
+    e.target.newQuote.value = ""
+    e.target.newAuthor.value = ""
+  })
+
+  quotesList.addEventListener("click", (e) => {
+    if (e.target.className === "btn-danger") deleteQuote(e.target.parentElement.dataset.id)
+    else if (e.target.className === "btn-success") likeQuote(e.target.parentElement.dataset.id, Number(e.target.innerText.split(" ")[1]))
+  })
+
+  const populateArea = (area, item) => {
+    area.innerHTML += `<li class='quote-card'>
+    <blockquote class="blockquote" data-id=${item.id}>
+      <p class="mb-0">${item.quote}</p>
+      <footer class="blockquote-footer">${item.author}</footer>
       <br>
-      <button class='btn-success'>Likes: <span>${quote.likes}</span></button>
+      <button class='btn-success'>Likes: <span>${item.likes}</span></button>
       <button class='btn-danger'>Delete</button>
-      </blockquote>
-      </li>`
-
-    })
-  })
-
-
-  form.addEventListener("submit", function(event){
-    event.preventDefault()
-    let quote = fetch(url, {
-      method: "POST",
-      headers: {
-        'Content-Type': 'application/json',
-        'Accepts': 'application/json'
-      },
-      body: JSON.stringify({
-        quote: quoteInput.value,
-        likes: 0,
-        author: authorInput.value
-      })
-
-    })
-    quotesContainer.innerHTML +=  `<li class='quote-card' id="${quote.id}">
-    <blockquote class="blockquote">
-    <p class="mb-0">${quote.quote}</p>
-    <footer class="blockquote-footer">${quote.author}</footer>
-    <br>
-    <button class='btn-success'>Likes: <span>${quote.likes}</span></button>
-    <button class='btn-danger'>Delete</button>
     </blockquote>
-    </li>`
-    event.target.reset()
+  </li>`
+  }
 
-  })
+  const findArea = (id, callback, data) => {
+    Array.from(quotesList.children).forEach(item => {
+      if (item.firstElementChild.dataset.id === String(id)) {
+        callback(item, data)
+      }
+    })
+  }
 
-  quotesContainer.addEventListener("click", function(event){
-    let id = Number(event.target.parentElement.parentElement.id)
-    if (event.target.className === "btn-danger"){
-      fetch(`http://localhost:3000/quotes/${id}`, {
-        method: "DELETE"
+  const updateArea = (area, item) => {
+    area.innerHTML = `<li class='quote-card'>
+    <blockquote class="blockquote" data-id=${item.id}>
+      <p class="mb-0">${item.quote}</p>
+      <footer class="blockquote-footer">${item.author}</footer>
+      <br>
+      <button class='btn-success'>Likes: <span>${item.likes}</span></button>
+      <button class='btn-danger'>Delete</button>
+    </blockquote>
+  </li>`
+  }
+
+  const deleteArea = () => {
+    quotesList.innerHTML = ""
+    getQuotes()
+  }
+
+  const postQuote = (qte, auth) => {
+    fetch(quotesURL, {
+      method: "POST",
+      headers: globalHeaders, 
+      body: JSON.stringify({
+        quote: qte,
+        likes: 0,
+        author: auth
       })
-      event.target.parentElement.remove()
-    } else if (event.target.className === "btn-success") {
-      event.target.firstElementChild.innerHTML = Number(event.target.firstElementChild.innerHTML) + 1
-      fetch(`http://localhost:3000/quotes/${id}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          likes: Number(event.target.firstElementChild.innerHTML)
-        })
-      })
-    }
+    })
+    .then(res => res.json())
+    .then(json => populateArea(quotesList, json))
+  }
 
-  })
+  const likeQuote = (id, likeNum) => {
+    likeNum += 1
+    fetch(`${quotesURL}/${id}`, {
+      method: "PATCH",
+      headers: globalHeaders,
+      body: JSON.stringify({
+        likes: likeNum
+      })
+    })
+    .then(res => res.json())
+    .then(json => {
+      findArea(json.id, updateArea, json)
+    })
+  }
+
+  const deleteQuote = (id) => {
+    fetch(`${quotesURL}/${id}`, {
+      method: "DELETE",
+      headers: globalHeaders
+    })
+    .then(res => res.json())
+    .then(json => findArea(id, deleteArea, ""))
+  }
+
+  getQuotes()
 })
