@@ -20,8 +20,7 @@ window.addEventListener("DOMContentLoaded", (e) => {
   form.addEventListener("submit", (e) => {
     e.preventDefault()
     postQuote(e.target.newQuote.value, e.target.newAuthor.value)
-    e.target.newQuote.value = ""
-    e.target.newAuthor.value = ""
+    e.target.reset()
   })
 
   quotesList.addEventListener("click", (e) => {
