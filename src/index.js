@@ -61,9 +61,8 @@ window.addEventListener("DOMContentLoaded", (e) => {
   </li>`
   }
 
-  const deleteArea = () => {
-    quotesList.innerHTML = ""
-    getQuotes()
+  const deleteArea = (area) => {
+    area.remove()
   }
 
   const postQuote = (qte, auth) => {
